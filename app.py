@@ -22,15 +22,19 @@ sqft_needed = st.number_input("Total Square Footage of Sod Needed", min_value=0)
 distance_km = st.number_input("One-Way Travel Distance to Site (km)", min_value=0.0)
 laborers = st.slider("Number of Laborers", 1, 5, 2)
 
-# Equipment selection
-equipment = st.multiselect("Select Equipment Needed", [
-    "Excavator ($130/hr)",
-    "Skid Steer ($130/hr)",
-    "Dump Truck ($130/hr)",
-    "Travel Trailer ($250/day)"
-])
+# Equipment usage
+st.subheader("🚜 Equipment Usage (Hourly)")
+excavator_hrs = st.number_input("Excavator Hours", min_value=0, step=1)
+skidsteer_hrs = st.number_input("Skid Steer Hours", min_value=0, step=1)
+dumptruck_hrs = st.number_input("Dump Truck Hours", min_value=0, step=1)
 
-delivery_needed = st.checkbox("Add Sod Delivery Charge?")
+# Trailer delivery per machine
+st.subheader("🛻 Trailer Delivery Per Machine")
+excavator_trailer_km = st.number_input("Trailer Round Trip Distance for Excavator (km)", min_value=0)
+skidsteer_trailer_km = st.number_input("Trailer Round Trip Distance for Skid Steer (km)", min_value=0)
+dumptruck_trailer_km = st.number_input("Trailer Round Trip Distance for Dump Truck (km)", min_value=0)
+
+# Markup
 markup_percent = st.number_input("Markup % on Materials (0–100%)", value=20.0)
 
 st.markdown("---")
@@ -59,15 +63,28 @@ travel_labor_cost = (labor_rate_main + (labor_rate_extra if laborers > 1 else 0)
 passenger_vehicle_cost = round_trip_km * passenger_vehicle_rate if laborers > 1 else 0
 
 # Equipment costs
-equipment_cost = 0
-for item in equipment:
-    if "Excavator" in item or "Skid Steer" in item or "Dump Truck" in item:
-        equipment_cost += 130 * travel_hours
-    elif "Travel Trailer" in item:
-        equipment_cost += 250
+equipment_cost = (
+    excavator_hrs * 130 +
+    skidsteer_hrs * 130 +
+    dumptruck_hrs * 130
+)
 
-# Delivery (optional flat fee)
-delivery_cost = 150 if delivery_needed else 0
+# Trailer delivery costs per machine
+def calc_trailer_cost(trip_km):
+    trips = trip_km / 25
+    return math.ceil(trips) * 250 * (1 + hst_rate)
+
+excavator_trailer_cost = calc_trailer_cost(excavator_trailer_km) if excavator_trailer_km > 0 else 0
+skidsteer_trailer_cost = calc_trailer_cost(skidsteer_trailer_km) if skidsteer_trailer_km > 0 else 0
+dumptruck_trailer_cost = calc_trailer_cost(dumptruck_trailer_km) if dumptruck_trailer_km > 0 else 0
+trailer_cost = excavator_trailer_cost + skidsteer_trailer_cost + dumptruck_trailer_cost
+
+# Sod pickup rules
+pickup_cost = 0
+if num_pallets <= 2:
+    pickup_cost = dumptruck_hrs * 130
+elif 3 <= num_pallets <= 6:
+    pickup_cost = dumptruck_hrs * 130 + trailer_cost
 
 # Labor (basic day estimate — customizable later)
 day_hours = 8  # Full day default
@@ -76,7 +93,7 @@ if laborers > 1:
     labor_cost += labor_rate_extra * day_hours * (laborers - 1)
 
 # Totals
-subtotal = material_with_markup + travel_labor_cost + passenger_vehicle_cost + equipment_cost + delivery_cost + labor_cost
+subtotal = material_with_markup + travel_labor_cost + passenger_vehicle_cost + equipment_cost + trailer_cost + pickup_cost + labor_cost
 tax = subtotal * hst_rate
 total = subtotal + tax
 
@@ -86,13 +103,16 @@ st.write(f"**Number of Pallets:** {num_pallets}")
 st.write(f"**Sod Material + Pallet Cost (with {markup_percent:.0f}% markup):** ${material_with_markup:,.2f}")
 st.write(f"**Labor Cost:** ${labor_cost:,.2f}")
 st.write(f"**Travel Labor Cost:** ${travel_labor_cost:,.2f}")
-st.write(f"**Passenger Vehicle Travel Cost:** ${passenger_vehicle_cost:,.2f}")
+st.write(f"**Passenger Vehicle Travel Cost (Round Trip):** ${passenger_vehicle_cost:,.2f}")
 st.write(f"**Equipment Cost:** ${equipment_cost:,.2f}")
-if delivery_needed:
-    st.write(f"**Delivery Cost:** ${delivery_cost:,.2f}")
+if trailer_cost > 0:
+    st.write(f"**Trailer Delivery Cost (Total):** ${trailer_cost:,.2f}")
+if pickup_cost > 0:
+    st.write(f"**Sod Pickup Cost (based on pallet quantity):** ${pickup_cost:,.2f}")
 st.write(f"**Subtotal:** ${subtotal:,.2f}")
 st.write(f"**HST (15%):** ${tax:,.2f}")
 st.success(f"**Total Estimate: ${total:,.2f}**")
 
 st.markdown("---")
 st.caption("Built for AKL Landscaping · www.AKLLandscaping.com · ☎ 902-802-4563")
+

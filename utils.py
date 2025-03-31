@@ -35,19 +35,30 @@ st.markdown("---")
 # -----------------------------
 # 🪨 Material Delivery
 # -----------------------------
-st.header("🪨 Material Delivery")
-gravel_km = st.number_input("Gravel Delivery Distance (km)", min_value=0, step=1)
-topsoil_km = st.number_input("Topsoil Delivery Distance (km)", min_value=0, step=1)
-compost_km = st.number_input("Compost Delivery Distance (km)", min_value=0, step=1)
+st.header("🪨 Material Delivery (5 Ton Loads)")
 
-# Base costs + extra distance charge (>30km)
-def material_cost(base_price, distance):
-    km_extra = max(0, distance - 30)
-    return base_price + (km_extra * 4.20 * 1.15)
+def calc_material_cost(base_price, delivery_km):
+    base_with_tax = base_price * 1.15
+    km_extra = max(0, delivery_km - 30)
+    extra_km_cost = km_extra * 4.20 * 1.15
+    return base_with_tax + extra_km_cost if delivery_km > 0 else 0
 
-gravel_cost = material_cost(250 * 1.15, gravel_km) if gravel_km > 0 else 0
-topsoil_cost = material_cost(250 * 1.15, topsoil_km) if topsoil_km > 0 else 0
-compost_cost = material_cost(450 * 1.15, compost_km) if compost_km > 0 else 0
+materials = {
+    "Screened Topsoil ($250+tx)": 250,
+    "Triple Mix Garden Soil ($300+tx)": 300,
+    "Screened Compost ($450+tx)": 450,
+    "Screened Sand ($200+tx)": 200,
+    "Electrical Trench Sand ($320+tx)": 320,
+    "Crusher Dust ($320+tx)": 320,
+    "Peastone ($330+tx)": 330,
+    "Clearstone/Class A/B Gravel ($250+tx)": 250
+}
+
+material_cost_total = 0
+for name, base_price in materials.items():
+    km = st.number_input(f"Delivery Distance for {name} (km)", min_value=0, step=1, key=f"{name}_km")
+    cost = calc_material_cost(base_price, km)
+    material_cost_total += cost
 
 st.markdown("---")
 
@@ -127,7 +138,6 @@ overseed_cost = pallets * 100 * 1.15 if add_overseeding else 0
 sprinkler_cost = pallets * 100 * 1.15 if add_sprinklers else 0
 
 addon_cost = lime_cost + fertilizer_cost + overseed_cost + sprinkler_cost
-material_cost_total = gravel_cost + topsoil_cost + compost_cost
 
 # Final total
 subtotal_items = sod_cost + labor_cost + overnight_total + addon_cost + material_cost_total
@@ -137,7 +147,7 @@ st.markdown(f"**Number of Pallets:** {pallets}")
 st.markdown(f"**Sod Material Cost:** ${sod_cost:,.2f}")
 st.markdown(f"**Labor Cost:** ${labor_cost:,.2f}")
 st.markdown(f"**Overnight Stay:** ${overnight_total:,.2f}")
-st.markdown(f"**Material Delivery (Gravel/Topsoil/Compost):** ${material_cost_total:,.2f}")
+st.markdown(f"**Material Delivery (Total):** ${material_cost_total:,.2f}")
 st.markdown(f"**Add-On Services:** ${addon_cost:,.2f}")
 st.markdown(f"**Equipment Cost:** ${equipment_cost:,.2f}")
 st.markdown(f"**Trailer Delivery:** ${trailer_cost:,.2f}")

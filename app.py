@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import calculate_material_delivery
+from utils import calculate_material_delivery, calculate_sod_quote
 
 st.set_page_config(page_title="AKL Hardscape Master Tool", layout="wide")
 
@@ -38,10 +38,8 @@ for name, price in materials:
         )
     base_prices[name] = price
 
-# Perform the calculation
 delivery_result = calculate_material_delivery(loads, distances, base_prices)
 
-# Display results
 st.markdown("### 🧾 Material Delivery Summary")
 for material, total in delivery_result["per_material"].items():
     if total > 0:
@@ -50,7 +48,37 @@ for material, total in delivery_result["per_material"].items():
 st.markdown(f"### 💰 Total Material Delivery: **${delivery_result['total']:,.2f}**")
 
 # ------------------------
-# 📍 Future Sections (Walkway, Wall, Fire Pit, etc.)
+# 🌱 Sod Installation Estimator
+# ------------------------
+st.header("🌱 Sod Installation Estimator")
+
+area = st.number_input("Total Area (sq ft)", min_value=0)
+distance_km = st.number_input("Travel Distance (km)", min_value=0)
+num_labourers = st.selectbox("Number of Laborers", list(range(1, 6)), index=1)
+dump_truck = st.checkbox("Dump Truck")
+skid_steer = st.checkbox("Skid Steer")
+excavator = st.checkbox("Excavator")
+travel_trailer_km = st.number_input("Travel Trailer Distance (km)", min_value=0)
+passenger_vehicle_km = st.number_input("Passenger Vehicle Distance (km)", min_value=0)
+
+if st.button("Calculate Sod Quote"):
+    sod_result = calculate_sod_quote(
+        area,
+        distance_km,
+        num_labourers,
+        dump_truck,
+        skid_steer,
+        excavator,
+        travel_trailer_km,
+        passenger_vehicle_km
+    )
+
+    st.subheader("Sod Installation Quote")
+    for k, v in sod_result.items():
+        st.write(f"**{k}**: ${v:,.2f}")
+
+# ------------------------
+# 📍 Future Sections
 # ------------------------
 st.markdown("---")
 st.info("More estimator tools coming soon: Walkways, Retaining Walls, Fire Pits, and Steps.")

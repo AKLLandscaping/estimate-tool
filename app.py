@@ -1,5 +1,6 @@
 import streamlit as st
-from utils import calculate_material_delivery, calculate_sod_quote
+from utils import calculate_material_delivery
+import math
 
 st.set_page_config(page_title="AKL Hardscape Master Tool", layout="wide")
 
@@ -34,7 +35,7 @@ for name, price in materials:
         )
     with cols[1]:
         distances[name] = st.number_input(
-            f"Delivery Distance for {name} (${price}+tx) (km)", min_value=0, step=1, key=f"distance_{name}"
+            f"Delivery Distance: local 30k + $4.2 / additional km", min_value=0, step=1, key=f"distance_{name}"
         )
     base_prices[name] = price
 
@@ -52,30 +53,61 @@ st.markdown(f"### 💰 Total Material Delivery: **${delivery_result['total']:,.2
 # ------------------------
 st.header("🌱 Sod Installation Estimator")
 
-area = st.number_input("Total Area (sq ft)", min_value=0)
-distance_km = st.number_input("Travel Distance (km)", min_value=0)
-num_labourers = st.selectbox("Number of Laborers", list(range(1, 6)), index=1)
-dump_truck = st.checkbox("Dump Truck")
-skid_steer = st.checkbox("Skid Steer")
-excavator = st.checkbox("Excavator")
-travel_trailer_km = st.number_input("Travel Trailer Distance (km)", min_value=0)
-passenger_vehicle_km = st.number_input("Passenger Vehicle Distance (km)", min_value=0)
+area = st.number_input("Total Sod Area (sq ft)", min_value=0)
+cost_per_sqft = 1.20
+st.write(f"**Sod Cost per Sq Ft:** ${cost_per_sqft:.2f}")
 
-if st.button("Calculate Sod Quote"):
-    sod_result = calculate_sod_quote(
-        area,
-        distance_km,
-        num_labourers,
-        dump_truck,
-        skid_steer,
-        excavator,
-        travel_trailer_km,
-        passenger_vehicle_km
-    )
+# Labor section
+st.subheader("👷 Labor")
+laborers = st.number_input("Number of Laborers", min_value=1, max_value=10, step=1)
+labor_hours = st.number_input("Hours per Laborer (rounded)", min_value=1, step=1)
+labor_rate = st.number_input("Hourly Wage ($)", min_value=1, step=1)
+labor_cost = laborers * labor_hours * labor_rate
 
-    st.subheader("Sod Installation Quote")
-    for k, v in sod_result.items():
-        st.write(f"**{k}**: ${v:,.2f}")
+# Equipment section
+st.subheader("🚜 Equipment")
+equipment_totals = 0
+
+equipment_types = ["Dump Truck", "Excavator", "Skid Steer"]
+equipment_data = {}
+for eq in equipment_types:
+    st.markdown(f"**{eq}**")
+    qty = st.number_input(f"How many {eq}s?", min_value=0, step=1, key=f"qty_{eq}")
+    rate = st.number_input(f"Hourly Rate for {eq} ($)", min_value=0, step=1, key=f"rate_{eq}")
+    hours = st.number_input(f"Hours on site per {eq}", min_value=0, step=1, key=f"hours_{eq}")
+    trailer_km = st.number_input(f"Trailer Distance for {eq} (km)", min_value=0, step=1, key=f"trailer_km_{eq}")
+    trailer_cost = 250 + max(0, trailer_km - 30) * 4.20
+    trailer_cost *= 1.15  # tax
+    total_eq = qty * ((hours * rate) + trailer_cost)
+    equipment_data[eq] = total_eq
+    equipment_totals += total_eq
+
+# Passenger Vehicle Travel
+st.subheader("🚗 Passenger Vehicle Travel")
+num_vehicles = st.number_input("Number of Passenger Vehicles", min_value=0, max_value=10, step=1)
+travel_km = st.number_input("Travel Distance (km)", min_value=0, step=1)
+travel_cost = num_vehicles * travel_km * 0.80
+
+# Sod and pallet costs
+pallet_coverage = 300
+pallets = math.ceil(area / pallet_coverage)
+sod_cost = area * cost_per_sqft
+pallet_cost = pallets * 25
+
+# Total calc
+hst = 0.15
+subtotal = sum(equipment_data.values()) + travel_cost + labor_cost + sod_cost + pallet_cost
+total = subtotal * (1 + hst)
+
+st.subheader("📊 Sod Quote Breakdown")
+st.write(f"**Total Area:** {area} sq ft")
+st.write(f"**Sod Material Cost:** ${sod_cost:.2f}")
+st.write(f"**Pallets Required:** {pallets} @ $25 each = ${pallet_cost:.2f}")
+st.write(f"**Labor Cost:** ${labor_cost:.2f}")
+st.write(f"**Equipment Cost (with trailer):** ${equipment_totals:.2f}")
+st.write(f"**Passenger Vehicle Travel:** ${travel_cost:.2f}")
+st.write(f"**Subtotal:** ${subtotal:.2f}")
+st.write(f"**Total with HST (15%):** ${total:.2f}")
 
 # ------------------------
 # 📍 Future Sections

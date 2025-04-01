@@ -39,12 +39,19 @@ for name, price in materials:
         )
     base_prices[name] = price
 
+# Perform the calculation
 delivery_result = calculate_material_delivery(loads, distances, base_prices)
 
-st.markdown("### 🧾 Material Delivery Summary")
-for material, total in delivery_result["per_material"].items():
-    if total > 0:
-        st.write(f"**{material}**: ${total:,.2f}")
+st.subheader("📄 Material Delivery Summary")
+for material, details in delivery_result["details"].items():
+    st.markdown(f"**{material}**")
+    st.write(f"- Loads: {details['loads']}")
+    st.write(f"- Base Price: ${details['base_price']:.2f}")
+    st.write(f"- Extra KM: {details['extra_km']} @ $4.20 = ${details['extra_charge']:.2f}")
+    st.write(f"- Subtotal Before Tax: ${details['subtotal']:.2f}")
+    st.write(f"- HST (15%): ${details['hst']:.2f}")
+    st.write(f"- Total for {details['loads']} Load(s): ${details['total']:.2f}")
+    st.markdown("---")
 
 st.markdown(f"### 💰 Total Material Delivery: **${delivery_result['total']:,.2f}**")
 
@@ -67,17 +74,16 @@ labor_cost = laborers * labor_hours * labor_rate
 # Equipment section
 st.subheader("🚜 Equipment")
 equipment_totals = 0
-
 equipment_types = ["Dump Truck", "Excavator", "Skid Steer"]
 equipment_data = {}
+
 for eq in equipment_types:
     st.markdown(f"**{eq}**")
     qty = st.number_input(f"How many {eq}s?", min_value=0, step=1, key=f"qty_{eq}")
     rate = st.number_input(f"Hourly Rate for {eq} ($)", min_value=0, step=1, key=f"rate_{eq}")
     hours = st.number_input(f"Hours on site per {eq}", min_value=0, step=1, key=f"hours_{eq}")
     trailer_km = st.number_input(f"Trailer Distance for {eq} (km)", min_value=0, step=1, key=f"trailer_km_{eq}")
-    trailer_cost = 250 + max(0, trailer_km - 30) * 4.20
-    trailer_cost *= 1.15  # tax
+    trailer_cost = (250 + max(0, trailer_km - 30) * 4.20) * 1.15  # with HST
     total_eq = qty * ((hours * rate) + trailer_cost)
     equipment_data[eq] = total_eq
     equipment_totals += total_eq
@@ -88,15 +94,15 @@ num_vehicles = st.number_input("Number of Passenger Vehicles", min_value=0, max_
 travel_km = st.number_input("Travel Distance (km)", min_value=0, step=1)
 travel_cost = num_vehicles * travel_km * 0.80
 
-# Sod and pallet costs
+# Sod + pallet math
 pallet_coverage = 300
 pallets = math.ceil(area / pallet_coverage)
 sod_cost = area * cost_per_sqft
 pallet_cost = pallets * 25
 
-# Total calc
+# Totals
 hst = 0.15
-subtotal = sum(equipment_data.values()) + travel_cost + labor_cost + sod_cost + pallet_cost
+subtotal = sod_cost + pallet_cost + labor_cost + equipment_totals + travel_cost
 total = subtotal * (1 + hst)
 
 st.subheader("📊 Sod Quote Breakdown")

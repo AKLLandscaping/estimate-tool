@@ -40,6 +40,7 @@ def calculate_material_delivery(loads, distances, base_prices):
         "total": round(grand_total, 2)
     }
 
+
 def calculate_sod_quote(area, labor_inputs, equipment_inputs, travel_inputs, gravel_inputs, stay_inputs, pallet_price=25, pallet_coverage=300):
     HST = 0.15
     SOD_COST_PER_SQFT = 1.20
